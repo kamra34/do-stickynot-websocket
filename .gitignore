@@ -1,5 +1,6 @@
 __pycache__/
 db/
+instance/
 # Elastic Beanstalk Files
 .elasticbeanstalk/*
 !.elasticbeanstalk/*.cfg.yml
