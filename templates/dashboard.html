@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+
+{% block scripts %}
+<script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
+<script>
+    var socket = io.connect('http://' + document.domain + ':' + location.port);
+    function handleNoteEvent(data) {
+        // Refresh the page to show the updated or new note
+        location.reload();
+    }
+    socket.on('note_update', handleNoteEvent);
+    socket.on('new_note', handleNoteEvent);
+</script>
+{% endblock %}
+
+{% block content %}
+{% with messages = get_flashed_messages() %}
+{% if messages %}
+<ul class="flashes">
+    {% for message in messages %}
+    <li{% if 'error' in message %} class="error" {% endif %}>{{ message }}</li>
+        {% endfor %}
+</ul>
+{% endif %}
+{% endwith %}
+
+<div class="container">
+    <h1>Welcome to your dashboard, {{ current_user.name }}{% if current_user.role == 'admin' %} (admin){% endif %}</h1>
+
+    <form action="{{ url_for('dashboard') }}" method="POST" class="mb-3">
+        <div class="form-group">
+            <label for="content">Add a new note:</label>
+            <textarea name="content" id="content" rows="4" class="form-control" required></textarea>
+        </div>
+        <div class="form-group">
+            <label for="group_id">Group:</label>
+            <select name="group_id" class="form-control">
+                <option value="">None</option>
+                {% for group in groups %}
+                <option value="{{ group.id }}">{{ group.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <input type="submit" value="Add Note" class="btn btn-primary">
+    </form>
+
+    <h2>Your Notes:</h2>
+    <div class="note-box-container">
+        {% for group in groups %}
+        <div class="note-box" data-group-id="{{ group.id }}">
+            <div class="note-box-title">{{ group.name }}</div>
+            {% for note in notes %}
+            {% if (note.group and note.group.id == group.id) or (group.name == "Uncategorized" and not note.group_id)%}
+            <div class="note">
+                <form action="{{ url_for('update_note') }}" method="post">
+                    <input type="hidden" name="note_id" value="{{ note.id }}">
+                    <textarea name="note_content">{{ note.content }}</textarea>
+                    <button type="submit">Update Note</button>
+                </form>
+                <span class="note-details">{{ note.member.name if note.member else 'Unknown' }} at {{
+                    note.date_created.strftime('%Y-%m-%d %H:%M:%S')}}</span>
+                <form method="post" action="{{ url_for('delete_note', note_id=note.id) }}" style="display:inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                </form>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+        {% endfor %}
+    </div>
+    <br>
+    <br>
+    {% if current_user.role == 'admin' %}
+    <a href="{{ url_for('members') }}" class="btn btn-info">Manage Members</a>
+    {% endif %}
+    {% if current_user.role != 'admin' %}
+    <a href="{{ url_for('view_members') }}" class="btn btn-info">View Members</a>
+    {% endif %}
+    <br>
+    <a href="{{ url_for('groups') }}" class="btn btn-info mt-2">Manage Groups</a>
+    <br>
+    <a href="{{ url_for('logout') }}" class="btn btn-danger mt-2">Logout</a>
+</div>
+{% endblock %}

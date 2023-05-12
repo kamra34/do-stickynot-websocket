@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <h1>Your Groups</h1>
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <ul class="flashes">
+                {% for message in messages %}
+                    <li{% if 'error' in message %} class="error"{% endif %}>{{ message }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    {% endwith %}
+    <form method="post" action="{{ url_for('groups') }}" class="mb-3">
+        <div class="form-group">
+            <label for="group_name">Group name:</label>
+            <input type="text" name="group_name" class="form-control" required>
+        </div>
+        <input type="submit" value="Add Group" class="btn btn-primary">
+    </form>
+    <ul class="list-unstyled">
+        {% for group in groups %}
+            <li class="mb-2">{{ group.name }}
+                {% if group.notes %}
+                    ({{ group.notes|length }} notes) 
+                {% endif %} 
+                {% if current_user.role == 'admin' %}
+                    <button class="btn btn-danger btn-sm" data-toggle="modal" data-target="#confirm-delete-{{ group.id }}">Delete</button>
+                {% endif %}
+            </li>
+            <!-- Confirm Delete Modal -->
+            {% if current_user.role == 'admin' %}
+                <div class="modal fade" id="confirm-delete-{{ group.id }}" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h4 class="modal-title">Delete Group?</h4>
+                                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                            </div>
+                            <div class="modal-body">
+                                <p>Are you sure you want to delete the group "{{ group.name }}"?</p>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                                <form action="{{ url_for('delete_group', group_id=group.id) }}" method="post">
+                                    <input type="hidden" name="confirm" value="yes">
+                                    <button type="submit" class="btn btn-danger">Delete</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        {% endfor %}
+    </ul>
+    <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
+</div>
+
+{% block scripts %}
+    <script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
+    <script>
+        var socket = io.connect('http://' + document.domain + ':' + location.port);
+
+        // Listen for the new_group event
+        socket.on('new_group', function(data) {
+            // Refresh the page to show the updated groups
+            location.reload();
+        });
+        
+        // Listen for the group_deleted event
+        socket.on('group_deleted', function(data) {
+            // Refresh the page to show the updated groups
+            location.reload();
+        });
+    </script>
+{% endblock %}
+
+{% endblock %}
